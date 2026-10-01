@@ -193,4 +193,19 @@ describe('Task 2: CPU Monitoring & Scheduled Message Service', () => {
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.count).toBeGreaterThan(0);
   });
+
+  test('Frontend Dashboard: GET / - serves interactive HTML dashboard', async () => {
+    const response = await request(app).get('/');
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toMatch(/html/);
+    expect(response.text).toContain('PolicyHub');
+    expect(response.text).toContain('Worker Thread File Ingestion');
+  });
+
+  test('API Info: GET /api/info - returns API documentation dictionary', async () => {
+    const response = await request(app).get('/api/info');
+    expect(response.status).toBe(200);
+    expect(response.body.name).toBe('Insurance Policy Management API');
+  });
 });
+

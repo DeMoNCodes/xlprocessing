@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insurance Policy & System Monitor Dashboard</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            PolicyHub <span class="text-xs bg-indigo-500/20 text-indigo-400 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30">Node.js Assessment</span>
+          </h1>
+          <p class="text-xs text-slate-400">Worker Threads • CPU Auto-Restart (70%) • Message Scheduler</p>
+        </div>
+      </div>
+
+      <!-- Real-time CPU Bar in Header -->
+      <div class="flex items-center space-x-4 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2">
+        <div class="flex items-center space-x-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span id="server-status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="server-status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span id="server-status-text" class="text-xs font-medium text-slate-300">Server Online</span>
+        </div>
+        <div class="h-4 w-px bg-slate-700"></div>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-microchip text-slate-400 text-xs"></i>
+          <span class="text-xs text-slate-400">CPU:</span>
+          <span id="header-cpu-val" class="text-xs font-bold text-white">0%</span>
+          <div class="w-20 bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div id="header-cpu-bar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+        <button onclick="triggerSimulateCpu()" class="text-xs bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5" title="Simulates high CPU load to test 70% threshold auto-restart">
+          <i class="fa-solid fa-bolt text-rose-400"></i> Test Restart
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <!-- Main Content Tabs -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- System & CPU Monitor Strip (Task 2.1) -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 shadow-lg backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+          <span>REAL-TIME CPU LOAD</span>
+          <span id="cpu-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">NORMAL</span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="stat-cpu-percent" class="text-3xl font-extrabold text-white">0%</span>
+          <span class="text-xs text-slate-400">/ Threshold 70%</span>
+        </div>
+        <div class="w-full bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+          <div id="stat-cpu-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 shadow-lg backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+          <span>PROCESS UPTIME</span>
+          <i class="fa-regular fa-clock text-slate-400"></i>
+        </div>
+        <div class="text-3xl font-extrabold text-white" id="stat-uptime">0s</div>
+        <p class="text-xs text-slate-400 mt-2">Auto-resets on server restart</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 shadow-lg backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+          <span>SYSTEM MEMORY</span>
+          <i class="fa-solid fa-memory text-slate-400"></i>
+        </div>
+        <div class="flex items-baseline space-x-1">
+          <span class="text-3xl font-extrabold text-white" id="stat-free-mem">--</span>
+          <span class="text-xs text-slate-400">MB Free</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Total: <span id="stat-total-mem">--</span> MB</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 shadow-lg backdrop-blur flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-1">
+            <span>TASK 2.1 AUTO-RESTART</span>
+            <i class="fa-solid fa-rotate text-indigo-400"></i>
+          </div>
+          <p class="text-xs text-slate-400">If CPU reaches 70%, server gracefully restarts via Cluster Supervisor.</p>
+        </div>
+        <button onclick="triggerSimulateCpu()" class="mt-3 w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-xs py-2 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-fire"></i> Spike CPU to 85% (Test Auto-Restart)
+        </button>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="flex space-x-2 border-b border-slate-800 pb-2">
+      <button onclick="switchTab('upload')" id="tab-btn-upload" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white shadow-md shadow-indigo-600/30 flex items-center gap-2">
+        <i class="fa-solid fa-file-arrow-up"></i> 1. File Upload (Worker Thread)
+      </button>
+      <button onclick="switchTab('search')" id="tab-btn-search" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-magnifying-glass"></i> 2. Search Policies by Username
+      </button>
+      <button onclick="switchTab('aggregate')" id="tab-btn-aggregate" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-chart-pie"></i> 3. Aggregated Policies by User
+      </button>
+      <button onclick="switchTab('scheduler')" id="tab-btn-scheduler" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-calendar-check"></i> 4. Scheduled Messages (Task 2.2)
+      </button>
+    </div>
+
+    <!-- TAB 1: FILE UPLOAD (WORKER THREAD) -->
+    <div id="tab-upload" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Upload Box -->
+        <div class="lg:col-span-1 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-5">
+          <div class="space-y-1">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-microchip text-indigo-400"></i> Worker Thread File Ingestion
+            </h3>
+            <p class="text-xs text-slate-400">Upload `.xlsx` or `.csv` data. Processing and MongoDB bulk writes run in an isolated worker thread.</p>
+          </div>
+
+          <form id="upload-form" class="space-y-4" onsubmit="handleFileUpload(event)">
+            <div class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-6 text-center transition cursor-pointer bg-slate-900/40 relative">
+              <input type="file" id="file-input" name="file" accept=".xlsx,.xls,.csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName(this)" required />
+              <div class="space-y-2">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-indigo-400"></i>
+                <p id="file-label" class="text-sm font-medium text-slate-300">Choose XLSX or CSV file</p>
+                <p class="text-xs text-slate-500">Supports sample_policies.xlsx or sample_policies.csv</p>
+              </div>
+            </div>
+
+            <button type="submit" id="upload-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-upload"></i> Upload & Process
+            </button>
+          </form>
+
+          <div class="border-t border-slate-700 pt-4 space-y-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bundled Test Files</span>
+            <p class="text-xs text-slate-400">You can also find pre-generated realistic sample files in <code class="text-indigo-400">sample-data/</code> folder.</p>
+          </div>
+        </div>
+
+        <!-- Ingestion Stats & Breakdown -->
+        <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold text-white">Ingestion Results Across 6 MongoDB Collections</h3>
+              <p class="text-xs text-slate-400">Parsed and inserted using Worker Threads without blocking Express event loop</p>
+            </div>
+            <span id="worker-status-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300">Ready</span>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4" id="stats-grid">
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">1. Agent Collection</span>
+              <div class="text-2xl font-bold text-indigo-400 mt-1" id="stat-agents">--</div>
+              <span class="text-[11px] text-slate-500">Unique agents</span>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">2. User Collection</span>
+              <div class="text-2xl font-bold text-violet-400 mt-1" id="stat-users">--</div>
+              <span class="text-[11px] text-slate-500">Customers / Users</span>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">3. User's Account</span>
+              <div class="text-2xl font-bold text-cyan-400 mt-1" id="stat-accounts">--</div>
+              <span class="text-[11px] text-slate-500">Accounts created</span>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">4. LOB Category</span>
+              <div class="text-2xl font-bold text-emerald-400 mt-1" id="stat-categories">--</div>
+              <span class="text-[11px] text-slate-500">Policy Categories</span>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">5. Policy Carrier</span>
+              <div class="text-2xl font-bold text-amber-400 mt-1" id="stat-carriers">--</div>
+              <span class="text-[11px] text-slate-500">Carriers / Companies</span>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl">
+              <span class="text-xs text-slate-400 font-medium">6. Policy Info</span>
+              <div class="text-2xl font-bold text-rose-400 mt-1" id="stat-policies">--</div>
+              <span class="text-[11px] text-slate-500">Linked Policies</span>
+            </div>
+          </div>
+
+          <!-- Log / Details Window -->
+          <div class="bg-slate-950 rounded-xl p-4 font-mono text-xs text-slate-300 border border-slate-800 h-44 overflow-y-auto" id="upload-log">
+            <span class="text-slate-500">// Worker Thread status output will appear here...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SEARCH POLICIES BY USERNAME -->
+    <div id="tab-search" class="tab-content space-y-6 hidden">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-magnifying-glass text-indigo-400"></i> Search Policies by Username
+            </h3>
+            <p class="text-xs text-slate-400">Enter first name or email to find policy info and populated relation data</p>
+          </div>
+          <div class="flex items-center gap-2 max-w-md w-full">
+            <div class="relative flex-1">
+              <input type="text" id="search-input" value="John" placeholder="e.g. John, Jane, Robert..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 pl-10" onkeydown="if(event.key==='Enter') executeSearch()" />
+              <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
+            </div>
+            <button onclick="executeSearch()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30">
+              <i class="fa-solid fa-search"></i> Search
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Results Table -->
+        <div class="border border-slate-700/80 rounded-xl overflow-hidden mt-4">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-700 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="py-3 px-4">Policy #</th>
+                  <th class="py-3 px-4">User Details</th>
+                  <th class="py-3 px-4">LOB Category</th>
+                  <th class="py-3 px-4">Carrier</th>
+                  <th class="py-3 px-4">Agent</th>
+                  <th class="py-3 px-4">Premium</th>
+                  <th class="py-3 px-4">Validity</th>
+                </tr>
+              </thead>
+              <tbody id="search-results-tbody" class="divide-y divide-slate-800 bg-slate-900/40">
+                <tr>
+                  <td colspan="7" class="py-8 text-center text-slate-500">
+                    Enter a username and click "Search" to view policies.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: AGGREGATED POLICIES BY USER -->
+    <div id="tab-aggregate" class="tab-content space-y-6 hidden">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-chart-pie text-indigo-400"></i> Aggregated Policies by User (MongoDB Pipeline)
+            </h3>
+            <p class="text-xs text-slate-400">Groups policies by user, counts total policies, sums premiums, and collects policy numbers</p>
+          </div>
+          <button onclick="loadAggregatedPolicies()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh
+          </button>
+        </div>
+
+        <div class="border border-slate-700/80 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-700 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="py-3 px-4">User</th>
+                  <th class="py-3 px-4">Contact</th>
+                  <th class="py-3 px-4 text-center">Total Policies</th>
+                  <th class="py-3 px-4">Total Premium</th>
+                  <th class="py-3 px-4">Policy Numbers</th>
+                </tr>
+              </thead>
+              <tbody id="aggregate-results-tbody" class="divide-y divide-slate-800 bg-slate-900/40">
+                <tr>
+                  <td colspan="5" class="py-8 text-center text-slate-500">
+                    Loading aggregation data...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: SCHEDULED MESSAGES (TASK 2.2) -->
+    <div id="tab-scheduler" class="tab-content space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Schedule Form -->
+        <div class="lg:col-span-1 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-4">
+          <div class="space-y-1">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-calendar-plus text-indigo-400"></i> Schedule Message Insertion
+            </h3>
+            <p class="text-xs text-slate-400">Post-service taking message, day, and time in body parameters. Inserts to DB when due.</p>
+          </div>
+
+          <form id="schedule-form" class="space-y-4" onsubmit="handleScheduleMessage(event)">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Message Text</label>
+              <textarea id="sched-message" rows="3" required placeholder="e.g. Policy renewal reminder for customer" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Day</label>
+                <input type="text" id="sched-day" required placeholder="YYYY-MM-DD or today" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Time</label>
+                <input type="text" id="sched-time" required placeholder="HH:mm or 14:30" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button type="button" onclick="setQuickSchedule(1)" class="flex-1 bg-slate-700/70 hover:bg-slate-700 text-slate-300 text-[11px] py-1.5 rounded-lg transition">
+                +1 min test
+              </button>
+              <button type="button" onclick="setQuickSchedule(5)" class="flex-1 bg-slate-700/70 hover:bg-slate-700 text-slate-300 text-[11px] py-1.5 rounded-lg transition">
+                +5 min test
+              </button>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 text-xs">
+              <i class="fa-solid fa-clock"></i> Schedule Message (POST)
+            </button>
+          </form>
+        </div>
+
+        <!-- Scheduled & Executed Message Tables -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Pending Scheduled -->
+          <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-hourglass-half text-amber-400"></i> Pending Scheduled Messages
+              </h4>
+              <button onclick="loadScheduledData()" class="text-xs text-indigo-400 hover:underline">Refresh</button>
+            </div>
+            <div class="overflow-x-auto border border-slate-700/70 rounded-xl">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-700 uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="py-2.5 px-3">Message</th>
+                    <th class="py-2.5 px-3">Target Date & Time</th>
+                    <th class="py-2.5 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduled-tbody" class="divide-y divide-slate-800 bg-slate-900/30">
+                  <tr><td colspan="3" class="py-4 text-center text-slate-500">No pending messages</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Inserted / Executed Messages in DB -->
+          <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-database text-emerald-400"></i> Inserted Messages in MongoDB ('messages' collection)
+              </h4>
+              <button onclick="loadScheduledData()" class="text-xs text-indigo-400 hover:underline">Refresh</button>
+            </div>
+            <div class="overflow-x-auto border border-slate-700/70 rounded-xl">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-700 uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="py-2.5 px-3">Message Text</th>
+                    <th class="py-2.5 px-3">Inserted At (DB Timestamp)</th>
+                  </tr>
+                </thead>
+                <tbody id="inserted-tbody" class="divide-y divide-slate-800 bg-slate-900/30">
+                  <tr><td colspan="2" class="py-4 text-center text-slate-500">No executed messages yet</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Frontend Logic -->
+  <script>
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+        btn.classList.add('bg-slate-800', 'text-slate-400');
+      });
+
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-btn-' + tabName);
+      activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+
+      if (tabName === 'aggregate') loadAggregatedPolicies();
+      if (tabName === 'scheduler') loadScheduledData();
+      if (tabName === 'search') executeSearch();
+    }
+
+    // Toast Notifications
+    function showToast(title, msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'border-emerald-500/50 bg-slate-900 text-emerald-300',
+        error: 'border-rose-500/50 bg-slate-900 text-rose-300',
+        info: 'border-indigo-500/50 bg-slate-900 text-indigo-300',
+        warn: 'border-amber-500/50 bg-slate-900 text-amber-300'
+      };
+      toast.className = `border p-3.5 rounded-xl shadow-2xl transition transform duration-300 text-xs flex items-start gap-2.5 max-w-sm ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <i class="fa-solid ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info'} mt-0.5"></i>
+        <div>
+          <strong class="font-bold block text-white">${title}</strong>
+          <span class="text-slate-300 text-[11px]">${msg}</span>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // CPU Utilization Polling
+    let serverOnline = true;
+    async function pollCpuStatus() {
+      try {
+        const res = await fetch('/api/system/cpu-status');
+        if (!res.ok) throw new Error('Status ' + res.status);
+        const json = await res.json();
+        const data = json.data;
+
+        serverOnline = true;
+        document.getElementById('server-status-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+        document.getElementById('server-status-ping').className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+        document.getElementById('server-status-text').textContent = 'Server Online';
+
+        const cpu = data.cpuPercentage || 0;
+        document.getElementById('header-cpu-val').textContent = cpu + '%';
+        document.getElementById('header-cpu-bar').style.width = Math.min(100, cpu) + '%';
+        document.getElementById('stat-cpu-percent').textContent = cpu + '%';
+        document.getElementById('stat-cpu-bar').style.width = Math.min(100, cpu) + '%';
+
+        const badge = document.getElementById('cpu-badge');
+        if (cpu >= 70) {
+          badge.className = 'px-2 py-0.5 text-[10px] rounded-full bg-rose-500/30 text-rose-300 font-bold border border-rose-500/50 animate-pulse';
+          badge.textContent = 'HIGH LOAD (≥70%)';
+          document.getElementById('stat-cpu-bar').className = 'bg-rose-500 h-full transition-all duration-300';
+        } else if (cpu >= 50) {
+          badge.className = 'px-2 py-0.5 text-[10px] rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30';
+          badge.textContent = 'ELEVATED';
+          document.getElementById('stat-cpu-bar').className = 'bg-amber-500 h-full transition-all duration-300';
+        } else {
+          badge.className = 'px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30';
+          badge.textContent = 'NORMAL';
+          document.getElementById('stat-cpu-bar').className = 'bg-emerald-500 h-full transition-all duration-300';
+        }
+
+        document.getElementById('stat-uptime').textContent = data.processUptimeSeconds + 's';
+        document.getElementById('stat-free-mem').textContent = data.freeMemoryMB;
+        document.getElementById('stat-total-mem').textContent = data.totalMemoryMB;
+      } catch (err) {
+        serverOnline = false;
+        document.getElementById('server-status-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500';
+        document.getElementById('server-status-ping').className = 'hidden';
+        document.getElementById('server-status-text').textContent = 'Restarting / Reconnecting...';
+      }
+    }
+    setInterval(pollCpuStatus, 1500);
+    pollCpuStatus();
+
+    // Trigger Simulate High CPU (>70%)
+    async function triggerSimulateCpu() {
+      if (!confirm('This will simulate a CPU spike (>70%) to test Task 2.1 auto-restart behavior. The server will gracefully restart in ~2 seconds. Proceed?')) {
+        return;
+      }
+      try {
+        showToast('Simulating CPU Load', 'Sending command to trigger 85% CPU load...', 'warn');
+        const res = await fetch('/api/system/simulate-high-cpu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetUsage: 85, durationMs: 2000 })
+        });
+        const data = await res.json();
+        showToast('Threshold Exceeded', 'Server detected CPU >= 70%. Graceful restart initiated!', 'error');
+      } catch (err) {
+        showToast('Restart in Progress', 'Server is restarting...', 'info');
+      }
+    }
+
+    // File Input Helper
+    function updateFileName(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById('file-label').textContent = input.files[0].name;
+      }
+    }
+
+    // Handle File Upload via Worker Thread
+    async function handleFileUpload(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('file-input');
+      if (!fileInput.files || !fileInput.files[0]) {
+        showToast('Error', 'Please select a file to upload.', 'error');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const btn = document.getElementById('upload-btn');
+      const badge = document.getElementById('worker-status-badge');
+      const log = document.getElementById('upload-log');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing in Worker Thread...';
+      badge.textContent = 'Worker Thread Active';
+      badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse';
+
+      log.innerHTML += `\n[${new Date().toLocaleTimeString()}] Uploading ${file.name} (${file.size} bytes)...`;
+      log.innerHTML += `\n[${new Date().toLocaleTimeString()}] Spawning background Node worker thread...`;
+      log.scrollTop = log.scrollHeight;
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast('Upload Success', `Processed ${data.stats.processedRows} rows across 6 collections!`, 'success');
+          badge.textContent = 'Worker Finished';
+          badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+
+          document.getElementById('stat-agents').textContent = data.stats.uniqueAgents;
+          document.getElementById('stat-users').textContent = data.stats.uniqueUsers;
+          document.getElementById('stat-accounts').textContent = data.stats.uniqueAccounts;
+          document.getElementById('stat-categories').textContent = data.stats.uniqueCategories;
+          document.getElementById('stat-carriers').textContent = data.stats.uniqueCarriers;
+          document.getElementById('stat-policies').textContent = data.stats.policiesHandled;
+
+          log.innerHTML += `\n[${new Date().toLocaleTimeString()}] SUCCESS: Bulk inserted ${data.stats.policiesHandled} policies!`;
+        } else {
+          showToast('Upload Failed', data.message || 'Error occurred', 'error');
+          badge.textContent = 'Error';
+          badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+          log.innerHTML += `\n[${new Date().toLocaleTimeString()}] ERROR: ${data.error || data.message}`;
+        }
+      } catch (err) {
+        showToast('Upload Error', err.message, 'error');
+        badge.textContent = 'Failed';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload & Process';
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // Search Policies by Username
+    async function executeSearch() {
+      const term = document.getElementById('search-input').value.trim();
+      const tbody = document.getElementById('search-results-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Searching policies...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/policies/search?username=${encodeURIComponent(term)}`);
+        const json = await res.json();
+
+        if (json.success && json.data.length > 0) {
+          tbody.innerHTML = json.data.map(p => {
+            const startDate = p.policy_start_date ? new Date(p.policy_start_date).toLocaleDateString() : 'N/A';
+            const endDate = p.policy_end_date ? new Date(p.policy_end_date).toLocaleDateString() : 'N/A';
+            const user = p.user_id || {};
+            const cat = p.policy_category_id ? p.policy_category_id.category_name : 'General';
+            const carrier = p.company_id ? p.company_id.company_name : 'N/A';
+            const agent = p.agent_id ? p.agent_id.agentName : 'N/A';
+
+            return `
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="py-3 px-4 font-mono font-bold text-indigo-400">${p.policy_number}</td>
+                <td class="py-3 px-4">
+                  <div class="font-semibold text-white">${user.firstName || 'Unknown'}</div>
+                  <div class="text-[11px] text-slate-400">${user.email || ''} ${user.phoneNumber ? '• ' + user.phoneNumber : ''}</div>
+                </td>
+                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">${cat}</span></td>
+                <td class="py-3 px-4 text-slate-300">${carrier}</td>
+                <td class="py-3 px-4 text-slate-400">${agent}</td>
+                <td class="py-3 px-4 font-semibold text-emerald-400">$${(p.premium_amount || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-slate-400 text-[11px]">${startDate} → ${endDate}</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">No policies found for "${term}". Try uploading sample data first.</td></tr>`;
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-400">Search error: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Load Aggregated Policies by User
+    async function loadAggregatedPolicies() {
+      const tbody = document.getElementById('aggregate-results-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Computing MongoDB Aggregation Pipeline...</td></tr>';
+
+      try {
+        const res = await fetch('/api/policies/aggregate-by-user?limit=25');
+        const json = await res.json();
+
+        if (json.success && json.data.length > 0) {
+          tbody.innerHTML = json.data.map(u => {
+            const policyBadges = (u.policyNumbers || []).slice(0, 4).map(num =>
+              `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">${num}</span>`
+            ).join(' ');
+            const remaining = (u.policyNumbers || []).length > 4 ? `+${u.policyNumbers.length - 4} more` : '';
+
+            return `
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="py-3 px-4">
+                  <div class="font-bold text-white">${u.userName || 'Unknown'}</div>
+                  <div class="text-[11px] text-slate-500">${u.userType || 'Customer'}</div>
+                </td>
+                <td class="py-3 px-4">
+                  <div class="text-slate-300">${u.email || 'N/A'}</div>
+                  <div class="text-[11px] text-slate-500">${u.phone || ''}</div>
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    ${u.totalPolicies} Policies
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-emerald-400">$${(u.totalPremiumAmount || 0).toLocaleString()}</td>
+                <td class="py-3 px-4">
+                  <div class="flex flex-wrap items-center gap-1">${policyBadges} <span class="text-[10px] text-slate-400">${remaining}</span></div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">No aggregation data available. Upload policies first.</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Schedule Quick Helpers
+    function setQuickSchedule(minutesAhead) {
+      const now = new Date(Date.now() + minutesAhead * 60000);
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+
+      document.getElementById('sched-day').value = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('sched-time').value = `${hh}:${min}`;
+      document.getElementById('sched-message').value = `Auto Reminder #${Math.floor(Math.random() * 1000)} (Scheduled for +${minutesAhead} min)`;
+    }
+
+    // Handle Schedule Form Submission
+    async function handleScheduleMessage(e) {
+      e.preventDefault();
+      const message = document.getElementById('sched-message').value.trim();
+      const day = document.getElementById('sched-day').value.trim();
+      const time = document.getElementById('sched-time').value.trim();
+
+      try {
+        const res = await fetch('/api/messages/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, day, time })
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          showToast('Message Scheduled', `Scheduled for ${new Date(json.data.targetExecutionTime).toLocaleString()}`, 'success');
+          loadScheduledData();
+        } else {
+          showToast('Error', json.message || 'Failed to schedule', 'error');
+        }
+      } catch (err) {
+        showToast('Error', err.message, 'error');
+      }
+    }
+
+    // Load Scheduled and Inserted Messages
+    async function loadScheduledData() {
+      // 1. Pending scheduled
+      try {
+        const res1 = await fetch('/api/messages/scheduled?status=pending');
+        const json1 = await res1.json();
+        const schedTbody = document.getElementById('scheduled-tbody');
+
+        if (json1.success && json1.data.length > 0) {
+          schedTbody.innerHTML = json1.data.map(m => `
+            <tr>
+              <td class="py-2.5 px-3 font-medium text-white">${m.message}</td>
+              <td class="py-2.5 px-3 text-slate-400 font-mono text-[11px]">${new Date(m.targetExecutionTime).toLocaleString()}</td>
+              <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">PENDING</span></td>
+            </tr>
+          `).join('');
+        } else {
+          schedTbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-500">No pending scheduled messages</td></tr>';
+        }
+      } catch (_) {}
+
+      // 2. Inserted messages
+      try {
+        const res2 = await fetch('/api/messages');
+        const json2 = await res2.json();
+        const insTbody = document.getElementById('inserted-tbody');
+
+        if (json2.success && json2.data.length > 0) {
+          insTbody.innerHTML = json2.data.map(m => `
+            <tr>
+              <td class="py-2.5 px-3 font-medium text-white">${m.message}</td>
+              <td class="py-2.5 px-3 text-emerald-400 font-mono text-[11px]">${new Date(m.insertedAt).toLocaleString()}</td>
+            </tr>
+          `).join('');
+        } else {
+          insTbody.innerHTML = '<tr><td colspan="2" class="py-4 text-center text-slate-500">No messages executed yet</td></tr>';
+        }
+      } catch (_) {}
+    }
+
+    // Default values on initial load
+    setQuickSchedule(2);
+  </script>
+</body>
+</html>

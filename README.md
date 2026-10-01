@@ -22,6 +22,7 @@ A production-ready Node.js backend application fulfilling all technical assessme
 
 | Task | Requirement | Status | Implementation Details |
 |---|---|---|---|
+| **Frontend UI** | Interactive Web Dashboard |  Completed | Responsive SPA dashboard served directly at `http://localhost:5000/` with live CPU meter, file upload, search, aggregation, and message scheduler. |
 | **Task 1.1** | Upload XLSX/CSV into MongoDB using Worker Threads |  Completed | Dedicated isolated `worker_threads` script (`fileUploadWorker.js`) parses spreadsheets and performs bulk upserts into MongoDB without blocking Node's main event loop. |
 | **Task 1.2** | Search API to find policy info with help of username |  Completed | `GET /api/policies/search?username=...` queries users by name/email (case-insensitive regex) and returns populated policy records. |
 | **Task 1.3** | API to provide aggregated policy by each user |  Completed | `GET /api/policies/aggregate-by-user` executes a MongoDB `$facet` & `$group` aggregation pipeline with pagination and user lookups. |

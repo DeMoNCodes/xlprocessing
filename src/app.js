@@ -15,15 +15,21 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
+const path = require('path');
+
+// Serve static frontend dashboard
+app.use(express.static(path.join(__dirname, '../public')));
+
 // API Routes
 app.use('/api', apiRoutes);
 
-// Root route with API directory info
-app.get('/', (req, res) => {
+// Root / API documentation endpoint
+app.get('/api/info', (req, res) => {
   res.json({
     name: 'Insurance Policy Management API',
     version: '1.0.0',
     documentation: {
+      dashboardUI: 'GET / (Interactive Dashboard)',
       uploadData: 'POST /api/upload (multipart/form-data with "file")',
       searchPoliciesByUsername: 'GET /api/policies/search?username=John',
       aggregatePoliciesByUser: 'GET /api/policies/aggregate-by-user',
