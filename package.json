@@ -1,0 +1,41 @@
+{
+  "name": "policy-management-assessment",
+  "version": "1.0.0",
+  "description": "Technical Assessment - Insurance Policy Management with Worker Threads, CPU Monitoring, and Scheduled Messages",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "generate-data": "node scripts/generateSampleData.js",
+    "test": "jest --runInBand --detectOpenHandles --forceExit"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "mongodb",
+    "worker-threads",
+    "cpu-monitoring",
+    "scheduler"
+  ],
+  "author": "Renjeesh",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.2",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "info": {
+    "name": "Insurance Policy Assessment API",
+    "description": "Collection for testing Task 1 (Worker Thread Ingestion, Search, Aggregation) and Task 2 (CPU Monitoring, Auto-Restart, Scheduled Messages)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Task 1 - Policy Management",
+      "item": [
+        {
+          "name": "1. Upload XLSX / CSV (Worker Threads)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "sample-data/sample_policies.xlsx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/upload",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "upload"]
+            },
+            "description": "Uploads XLSX or CSV data into 6 separate MongoDB collections using Node.js Worker Threads."
+          }
+        },
+        {
+          "name": "2. Search Policies by Username",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/policies/search?username=John",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "policies", "search"],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "John"
+                }
+              ]
+            },
+            "description": "Finds policy information with the help of the username/firstname."
+          }
+        },
+        {
+          "name": "3. Aggregated Policies by Each User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/policies/aggregate-by-user?page=1&limit=20",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "policies", "aggregate-by-user"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "MongoDB Aggregation pipeline providing policies grouped and aggregated by user."
+          }
+        },
+        {
+          "name": "4. List All Policies (Helper)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/policies?page=1&limit=20",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "policies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Task 2 - CPU Monitor & Scheduled Messages",
+      "item": [
+        {
+          "name": "1. Real-time CPU Utilization Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/system/cpu-status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "system", "cpu-status"]
+            },
+            "description": "Returns real-time CPU utilization, system metrics, and threshold (70%)."
+          }
+        },
+        {
+          "name": "2. Simulate High CPU (Test Auto-Restart)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUsage\": 85,\n  \"durationMs\": 2500\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/system/simulate-high-cpu",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "system", "simulate-high-cpu"]
+            },
+            "description": "Simulates CPU spike exceeding 70% threshold, triggering automatic graceful server restart."
+          }
+        },
+        {
+          "name": "3. Schedule Message Insertion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Policy Renewal Notice for Customer #4921\",\n  \"day\": \"2026-10-02\",\n  \"time\": \"14:30\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/messages/schedule",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "messages", "schedule"]
+            },
+            "description": "Accepts message, day, and time in body parameters and inserts into DB at that particular day and time."
+          }
+        },
+        {
+          "name": "4. List Scheduled Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/messages/scheduled",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "messages", "scheduled"]
+            }
+          }
+        },
+        {
+          "name": "5. List Inserted Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "messages"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
